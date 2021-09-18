@@ -64,12 +64,51 @@ public class Converter {
         try {
             
             CSVReader reader = new CSVReader(new StringReader(csvString));
-            List<String[]> full = reader.readAll();
-            Iterator<String[]> iterator = full.iterator();
+            List<String[]> full; //List of string arrays
+            full = reader.readAll(); //Read CSV into List of String Arrays
             
-            // INSERT YOUR CODE HERE
+            Iterator<String[]> iterator;
+            iterator = full.iterator(); //Read one line at a time
             
-        }        
+            //--------INSERT YOUR CODE HERE------------
+            
+
+            //JSON Obj will become final format
+            JSONObject jsonObj = new JSONObject();
+            
+            
+            JSONArray columnHead = new JSONArray(); //Column Headers 
+            JSONArray rowHead = new JSONArray(); //Row Headers (Student ID)
+            JSONArray data = new JSONArray(); //Data in block (Grades)
+            
+            
+            JSONArray temp;
+            String[] record = iterator.next(); //Get first row
+            
+            for(int i = 0; i < record.length; i++) { //For each column Header in the current row
+                columnHead.add(record[i]); //Add it to the column headers array
+            }
+            
+            while(iterator.hasNext()) { //While there is data being read
+                temp = new JSONArray(); //temp info
+                record = iterator.next(); //Get next row (line) in file
+                rowHead.add(record[0]); //Add the first item in the row to the row header - Student ID
+                for(int i = 1; i < record.length; i++) { //For each item past the row header - Student Grades
+                    int stringHolder = Integer.parseInt(record[i]); //Convert to integer representation
+                    temp.add(stringHolder); //add converted string to temp variable
+                }
+                data.add(temp); //Add the converted data to the data array
+            }
+            
+            //Put all Arrays into jsonObj
+            jsonObj.put("rowHeaders", rowHead);
+            jsonObj.put("colHeaders", columnHead);
+            jsonObj.put("data", data);
+            
+            //Put results into result String
+            results = JSONValue.toJSONString(jsonObj);
+            }        
+        
         catch(Exception e) { e.printStackTrace(); }
         
         return results.trim();
@@ -85,8 +124,40 @@ public class Converter {
             StringWriter writer = new StringWriter();
             CSVWriter csvWriter = new CSVWriter(writer, ',', '"', '\\', "\n");
             
-            // INSERT YOUR CODE HERE
+            //-----------INSERT YOUR CODE HERE-------------
             
+            JSONParser parse = new JSONParser(); //Parse obj
+            JSONObject jsonObj = (JSONObject)parse.parse(jsonString); //Parse JSON structured data
+            
+            JSONArray rowHead = (JSONArray)jsonObj.get("rowHeaders"); //Put row headers into JSON Array
+            JSONArray columnHead = (JSONArray)jsonObj.get("colHeaders");// "" column ""
+            JSONArray data = (JSONArray)jsonObj.get("data"); //"" data into JSON Array
+            
+            JSONArray temp; //temp container array
+            String[] record = new String[columnHead.size()]; //Row with same length as # of columns
+            
+            
+            //----This block sets the first row of the CSV file which is only Column Headers----
+            for(int i = 0; i < columnHead.size(); i ++) { //For the # of column headers
+                record[i] = (String) columnHead.get(i); //Put each into the same index point in the first row of the file
+            }
+            csvWriter.writeNext(record); //record that row in the record
+            
+            
+            //-----This block formats the rest of the data into rows----
+            for(int i = 0; i < data.size(); i++) { //for # of items in data array
+                
+                temp = (JSONArray) data.get(i); //store the set of grades into temp and type cast into JSONArray
+                record = new String[temp.size() + 1]; //create row with size one larger than data length to include ID -->  ID, "123", "234", "345"
+                record[0] = (String) rowHead.get(i); //put the student ID in the first column
+                
+                for(int j = 0; j < record.length - 1; j++) { //for every grade in the row (every column except ID)
+                    record[j + 1] = Long.toString((Long)temp.get(j));//Convert grades to strings
+                }
+                csvWriter.writeNext(record); //Add the row to the record
+                
+            }
+            results = writer.toString(); 
         }
         
         catch(Exception e) { e.printStackTrace(); }
